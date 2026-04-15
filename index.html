@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>UricSense — Data Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --card: #161f2e;
+    --border: #1e2d42;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---- GRID BACKGROUND ---- */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ---- HEADER ---- */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-text h1 { font-family: var(--mono); font-size: 1.2rem; color: var(--accent); letter-spacing: 0.05em; }
+  .logo-text p { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent3);
+    box-shadow: 0 0 6px var(--accent3);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ---- SETUP BANNER ---- */
+  .setup-banner {
+    margin: 24px 0;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(0,229,255,0.08));
+    border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 12px;
+    font-size: 0.875rem;
+    line-height: 1.7;
+  }
+  .setup-banner h3 { color: var(--accent); font-family: var(--mono); margin-bottom: 8px; font-size: 0.8rem; letter-spacing: 0.1em; }
+  .setup-banner ol { padding-left: 20px; color: var(--muted); }
+  .setup-banner ol li { margin-bottom: 4px; }
+  .setup-banner code {
+    background: rgba(0,229,255,0.1);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 0.8em;
+  }
+  .setup-banner a { color: var(--accent); }
+
+  /* ---- CONFIG SECTION ---- */
+  .config-row {
+    display: flex; gap: 12px; align-items: flex-end;
+    margin: 0 0 28px;
+    flex-wrap: wrap;
+  }
+  .config-row label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 6px; font-family: var(--mono); }
+  .config-row input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    min-width: 280px;
+    flex: 1;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .config-row input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+  .btn-primary:hover { background: #33eaff; transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---- STATS CARDS ---- */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-accent, var(--accent));
+  }
+  .stat-card:hover { border-color: var(--card-accent, var(--accent)); }
+  .stat-label { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-value { font-size: 1.9rem; font-family: var(--mono); font-weight: 700; color: var(--card-accent, var(--accent)); line-height: 1; }
+  .stat-unit { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+  /* ---- TABLE ---- */
+  .table-wrapper {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .table-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-header h2 { font-family: var(--mono); font-size: 0.85rem; color: var(--text); letter-spacing: 0.05em; }
+  .row-count { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  thead tr { background: rgba(0,229,255,0.04); }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(30,45,66,0.6);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,229,255,0.03); }
+  .val-temp { color: #fb923c; }
+  .val-spo2 { color: var(--accent3); }
+  .val-bpm  { color: var(--accent);  }
+  .val-fsr  { color: var(--warn);    }
+
+  /* ---- MINI SPARKLINES ---- */
+  .charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .chart-card h3 { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .chart-card canvas { width: 100% !important; height: 80px !important; }
+
+  /* ---- EMPTY STATE ---- */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.4; }
+  .empty-state p { font-family: var(--mono); font-size: 0.85rem; }
+
+  /* ---- DOWNLOAD ROW ---- */
+  .action-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
+
+  /* ---- TOAST ---- */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text);
+    z-index: 999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(.175,.885,.32,1.275);
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- HEADER -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">🩸</div>
+        <div class="logo-text">
+          <h1>URICSENSE</h1>
+          <p>Non-Invasive Uric Acid Monitor — Data Dashboard</p>
+        </div>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="status-text">Waiting for config</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- SETUP GUIDE -->
+  <div class="setup-banner" id="setup-guide">
+    <h3>⚡ SETUP REQUIRED</h3>
+    <ol>
+      <li>Go to <a href="https://script.google.com" target="_blank">script.google.com</a>, create a new project, paste <code>Code.gs</code>, and link it to a Google Sheet.</li>
+      <li>Deploy → <strong>New Deployment</strong> → Web App → Execute as <em>Me</em> → Access <em>Anyone</em>. Copy the URL.</li>
+      <li>Paste the URL below AND into your ESP32 code as <code>scriptURL</code>.</li>
+      <li>To view data here: paste your Google Sheet <strong>CSV export URL</strong> (File → Share → Publish to web → CSV) in the second field.</li>
+    </ol>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="config-row">
+    <div style="flex:1; min-width:260px;">
+      <label>GOOGLE SHEET CSV URL (published)</label>
+      <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"/>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" onclick="loadData()">▶ LOAD DATA</button>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button class="btn btn-secondary" onclick="clearConfig()">CLEAR</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid" id="stats-grid" style="display:none">
+    <div class="stat-card" style="--card-accent:#fb923c">
+      <div class="stat-label">Avg Temp</div>
+      <div class="stat-value" id="s-temp">—</div>
+      <div class="stat-unit">°C</div>
+    </div>
+    <div class="stat-card" style="--card-accent:#00e5ff">
+      <div class="stat-label">Avg BPM</div>
+      <div class="stat-value" id="s-bpm">—</div>
+      <div class="stat-unit">beats/min</div>
+    </div>
+    <div class="stat-card" style="--card-accent:#10b981">
+      <div class="stat-label">Avg SpO2</div>
+      <div class="stat-value" id="s-spo2">—</div>
+      <div class="stat-unit">%</div>
+    </div>
+    <div class="stat-card" style="--card-accent:#f59e0b">
+      <div class="stat-label">Avg FSR</div>
+      <div class="stat-value" id="s-fsr">—</div>
+      <div class="stat-unit">raw ADC</div>
+    </div>
+    <div class="stat-card" style="--card-accent:#a78bfa">
+      <div class="stat-label">Total Readings</div>
+      <div class="stat-value" id="s-count">—</div>
+      <div class="stat-unit">samples</div>
+    </div>
+  </div>
+
+  <!-- SPARKLINES -->
+  <div class="charts-row" id="charts-row" style="display:none">
+    <div class="chart-card">
+      <h3>Temperature (°C)</h3>
+      <canvas id="chart-temp"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>BPM</h3>
+      <canvas id="chart-bpm"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>SpO2 (%)</h3>
+      <canvas id="chart-spo2"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>FSR Raw</h3>
+      <canvas id="chart-fsr"></canvas>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrapper" id="table-wrapper">
+    <div class="table-header">
+      <h2>📋 READINGS LOG</h2>
+      <span class="row-count" id="row-count">No data loaded</span>
+    </div>
+    <div class="table-scroll">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">📡</div>
+        <p>Waiting for data — configure your sheet URL above</p>
+      </div>
+      <table id="data-table" style="display:none">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Timestamp</th>
+            <th>Temp (°C)</th>
+            <th>FSR Raw</th>
+            <th>BPM</th>
+            <th>SpO2 (%)</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="action-row" id="action-row" style="display:none">
+    <button class="btn btn-primary" onclick="downloadCSV()">⬇ DOWNLOAD CSV</button>
+    <button class="btn btn-secondary" onclick="loadData()">↻ REFRESH</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  let allRows = [];
+  const charts = {};
+
+  // ---- Load & parse CSV ----
+  async function loadData() {
+    const url = document.getElementById('sheetUrl').value.trim();
+    if (!url) { toast('⚠ Enter your Google Sheet CSV URL first'); return; }
+    localStorage.setItem('uricSenseURL', url);
+    setStatus('Loading…');
+
+    try {
+      // Use allorigins proxy to avoid CORS
+      const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const res = await fetch(proxy);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      parseAndRender(text);
+      setStatus('Live ✓');
+    } catch(e) {
+      toast('❌ Failed to load: ' + e.message);
+      setStatus('Error');
+    }
+  }
+
+  function parseAndRender(csv) {
+    const lines = csv.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) { toast('No data rows found'); return; }
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    allRows = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',');
+      const row = {};
+      headers.forEach((h, idx) => row[h] = (cols[idx] || '').trim());
+      allRows.push(row);
+    }
+
+    renderStats();
+    renderTable();
+    renderCharts();
+
+    document.getElementById('stats-grid').style.display = 'grid';
+    document.getElementById('charts-row').style.display = 'grid';
+    document.getElementById('data-table').style.display = 'table';
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('action-row').style.display = 'flex';
+    document.getElementById('setup-guide').style.display = 'none';
+    document.getElementById('row-count').textContent = allRows.length + ' readings';
+  }
+
+  function avg(arr, key) {
+    const vals = arr.map(r => parseFloat(r[key])).filter(v => !isNaN(v));
+    return vals.length ? (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1) : '—';
+  }
+
+  function renderStats() {
+    document.getElementById('s-temp').textContent  = avg(allRows, 'temperature_c');
+    document.getElementById('s-bpm').textContent   = avg(allRows, 'bpm');
+    document.getElementById('s-spo2').textContent  = avg(allRows, 'spo2');
+    document.getElementById('s-fsr').textContent   = avg(allRows, 'fsr_raw');
+    document.getElementById('s-count').textContent = allRows.length;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+    const display = allRows.slice().reverse().slice(0, 200); // show latest 200
+    display.forEach((row, i) => {
+      tbody.innerHTML += `
+        <tr>
+          <td style="color:var(--muted)">${allRows.length - i}</td>
+          <td>${row.timestamp || '—'}</td>
+          <td class="val-temp">${parseFloat(row.temperature_c).toFixed(2)}</td>
+          <td class="val-fsr">${row.fsr_raw || '—'}</td>
+          <td class="val-bpm">${row.bpm || '—'}</td>
+          <td class="val-spo2">${parseFloat(row.spo2).toFixed(1)}</td>
+        </tr>`;
+    });
+  }
+
+  function sparkline(id, data, color) {
+    const ctx = document.getElementById(id).getContext('2d');
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map((_,i) => i+1),
+        datasets: [{
+          data,
+          borderColor: color,
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.4,
+          fill: true,
+          backgroundColor: color + '18'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false }
+        },
+        animation: false
+      }
+    });
+  }
+
+  function renderCharts() {
+    const last50 = allRows.slice(-50);
+    sparkline('chart-temp', last50.map(r => parseFloat(r.temperature_c)), '#fb923c');
+    sparkline('chart-bpm',  last50.map(r => parseFloat(r.bpm)),           '#00e5ff');
+    sparkline('chart-spo2', last50.map(r => parseFloat(r.spo2)),          '#10b981');
+    sparkline('chart-fsr',  last50.map(r => parseFloat(r.fsr_raw)),       '#f59e0b');
+  }
+
+  function downloadCSV() {
+    if (!allRows.length) return;
+    const headers = ['timestamp', 'temperature_c', 'fsr_raw', 'bpm', 'spo2'];
+    const rows = [headers.join(',')];
+    allRows.forEach(r => rows.push(headers.map(h => r[h] || '').join(',')));
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'uric_acid_data_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    toast('✅ CSV downloaded!');
+  }
+
+  function clearConfig() {
+    localStorage.removeItem('uricSenseURL');
+    document.getElementById('sheetUrl').value = '';
+    setStatus('Waiting for config');
+  }
+
+  function setStatus(msg) { document.getElementById('status-text').textContent = msg; }
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // Restore saved URL on load
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem('uricSenseURL');
+    if (saved) {
+      document.getElementById('sheetUrl').value = saved;
+      loadData();
+    }
+  });
+</script>
+</body>
+</html>
